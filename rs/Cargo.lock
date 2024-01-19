@@ -15,6 +15,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 
 [[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
 name = "log"
 version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -63,6 +69,7 @@ name = "rsos"
 version = "0.1.0"
 dependencies = [
  "uefi",
+ "uefi-services",
 ]
 
 [[package]]
@@ -99,7 +106,8 @@ dependencies = [
 [[package]]
 name = "uefi"
 version = "0.26.0"
-source = "git+https://github.com/rust-osdev/uefi-rs.git#22bedc6efdba423dd95175c7247c67bb86d01ebc"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07ead9f748a4646479b850add36b527113a80e80a7e0f44d7b0334291850dcc5"
 dependencies = [
  "bitflags",
  "log",
@@ -130,6 +138,17 @@ dependencies = [
  "bitflags",
  "ptr_meta",
  "uguid",
+]
+
+[[package]]
+name = "uefi-services"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a79fcb420624743c895bad0f9480fbc2f64e7c8d8611fb1ada6bdd799942feb4"
+dependencies = [
+ "cfg-if",
+ "log",
+ "uefi",
 ]
 
 [[package]]

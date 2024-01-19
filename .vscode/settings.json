@@ -1,5 +1,8 @@
 {
     "files.associations": {
         "blockio.h": "c"
-    }
+    },
+    "rust-analyzer.cargo.target": "x86_64-unknown-uefi",
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.diagnostics.disabled": ["unresolved-proc-macro"]
 }
