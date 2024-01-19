@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/vscode/edk2/MikanLoaderPkg",
+                "/home/vscode/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/MikanLoaderPkg/Loader/DEBUG",
+                "/home/vscode/edk2/MdePkg",
+                "/home/vscode/edk2/MdePkg/Include",
+                "/home/vscode/edk2/MdePkg/Test/UnitTest/Include",
+                "/home/vscode/edk2/MdePkg/Include/X64"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}

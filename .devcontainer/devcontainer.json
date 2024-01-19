@@ -1,0 +1,17 @@
+{
+  "name": "${localWorkspaceFolderBasename}",
+  "image": "${localWorkspaceFolderBasename}",
+  "dockerFile": "./Dockerfile",
+  "runArgs": ["--privileged"],
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "settings": {
+    "terminal.integrated.profiles.linux": "/bin/bash"
+  },
+  "mounts": [
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+  ],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}"
+  }
+}
