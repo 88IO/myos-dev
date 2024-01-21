@@ -1,0 +1,17 @@
+[unstable]
+build-std = ["core", "alloc"]
+build-std-features = ["compiler-builtins-mem"]
+
+[build]
+target = "./.cargo/x86_64-unknown-elf.json"
+# target = "x86_64-unknown-none"
+
+# [target.x86_64-unknown-none]
+# linker = "ld.lld"
+# rustflags = [
+#     "-C", "link-arg=-znorelro",
+#     "-C", "link-arg=--entry=kernel_main",
+#     "-C", "link-arg=--image-base=0x100000",
+#     "-C", "link-arg=--static",
+#     "-C", "link-arg=-zseparate-code"
+# ]
