@@ -9,10 +9,10 @@ use uefi::proto::console::gop::GraphicsOutput;
 use uefi::proto::media::file::{File, FileMode, FileAttribute, FileType, FileInfo};
 use uefi::table::boot::{AllocateType, MemoryType};
 use uefi_services::println;
-//use core::fmt::Write;
+use goblin::elf;
 use core::arch::asm;
+use common::FrameBufferConfig;
 
-const KERNEL_BASE_ADDR: u64 = 0x100000;
 const EFI_PAGE_SIZE: usize = 0x1000;
 
 #[entry]
@@ -24,7 +24,6 @@ fn efi_main(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     println!("Hello, world!");
 
-    //@start read_memmap
     let mut memmap_buf= [0u8; 4096 * 4];
 
     let memmap = bt.memory_map(&mut memmap_buf).unwrap();
@@ -35,47 +34,48 @@ fn efi_main(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             .unwrap();
         fs.open_volume().unwrap()
     };
-    
-    let mut memmap_file = match root_dir
-        .open(cstr16!("\\memmap"), FileMode::CreateReadWrite, FileAttribute::empty())
-        .unwrap()
-        .into_type()
-        .unwrap()
+     
+    //@start read_memmap
     {
-        FileType::Regular(file) => file,
-        FileType::Dir(_) => panic!()
-    };
+        let mut memmap_file = match root_dir
+            .open(cstr16!("\\memmap"), FileMode::CreateReadWrite, FileAttribute::empty())
+            .unwrap()
+            .into_type()
+            .unwrap()
+        {
+            FileType::Regular(file) => file,
+            FileType::Dir(_) => panic!()
+        };
 
-    memmap_file.write("Index, Type, Type(name), PhysicalStart, NumberOfPages, Attribute\n".as_bytes()).unwrap();
+        memmap_file.write("Index, Type, Type(name), PhysicalStart, NumberOfPages, Attribute\n".as_bytes()).unwrap();
 
-    for (i, desc) in memmap.entries().enumerate() {
-        let line = format!("{}, {:x}, {:?}, {:08x}, {:x}, {:x}\n",
-            i,
-            desc.ty.0,
-            desc.ty,
-            desc.phys_start,
-            desc.page_count,
-            desc.att.bits() & 0xfffff);
-        memmap_file.write(line.as_bytes()).unwrap();
+        for (i, desc) in memmap.entries().enumerate() {
+            let line = format!("{}, {:x}, {:?}, {:08x}, {:x}, {:x}\n",
+                i,
+                desc.ty.0,
+                desc.ty,
+                desc.phys_start,
+                desc.page_count,
+                desc.att.bits() & 0xfffff);
+            memmap_file.write(line.as_bytes()).unwrap();
+        }
     }
-
-    drop(memmap_file);
     //@end read_memmap
 
     //@start read_gop
-    let mut gop = {
+    let config: FrameBufferConfig = {
         let gop_handle = bt
             .get_handle_for_protocol::<GraphicsOutput>()
             .unwrap();
-        bt
+        let mut gop = bt
             .open_protocol_exclusive::<GraphicsOutput>(gop_handle)
-            .unwrap()
-    };
+            .unwrap();
 
-    let mut frame_buffer = gop.frame_buffer();
-    let frame_buf_base = frame_buffer.as_mut_ptr();
-    let frame_buf_size = frame_buffer.size();
-    drop(gop);
+        FrameBufferConfig {
+            frame_buffer: gop.frame_buffer().as_mut_ptr(),
+            mode_info: gop.current_mode_info()
+        }
+    };
     //@end read_gop
 
     //@start read_kernel
@@ -91,20 +91,48 @@ fn efi_main(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let kernel_size = kernel_file.get_boxed_info::<FileInfo>().unwrap().file_size() as usize;
 
-    bt
-        .allocate_pages(
-            AllocateType::Address(KERNEL_BASE_ADDR),
-            MemoryType::LOADER_DATA, 
-            (kernel_size + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE
-        )
-        .unwrap();
+    let buffer_pool = bt.allocate_pool(MemoryType::LOADER_DATA, kernel_size).unwrap();
+    let kernel_buffer = unsafe {
+        core::slice::from_raw_parts_mut(buffer_pool, kernel_size)
+    };
+    kernel_file.read(kernel_buffer).unwrap();
 
-    kernel_file.read(
-        unsafe {
-            core::slice::from_raw_parts_mut(KERNEL_BASE_ADDR as *mut u8, kernel_size)
+    let elf = elf::Elf::parse(kernel_buffer).unwrap();
+
+    let entry_point_addr = elf.entry;
+    let mut kernel_first_addr = usize::MAX;
+    let mut kernel_last_addr = usize::MIN;
+    for phdr in elf.program_headers.iter() {
+        if phdr.p_type != elf::program_header::PT_LOAD {
+            continue;
         }
+        kernel_first_addr = kernel_first_addr.min(phdr.p_vaddr as usize);
+        kernel_last_addr = kernel_last_addr.max((phdr.p_vaddr + phdr.p_memsz) as usize);
+    }
+
+    bt.allocate_pages(
+        AllocateType::Address(kernel_first_addr as u64),
+        MemoryType::LOADER_DATA, 
+        (kernel_last_addr - kernel_first_addr + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE
     ).unwrap();
+    
+    for phdr in elf.program_headers.iter() {
+        if phdr.p_type != elf::program_header::PT_LOAD {
+            continue;
+        }
+        let ofs = phdr.p_offset as usize;
+        let fsize = phdr.p_filesz as usize;
+        let msize = phdr.p_memsz as usize;
+        let dest = unsafe { core::slice::from_raw_parts_mut(phdr.p_vaddr as *mut u8, msize) };
+        dest[..fsize].copy_from_slice(&kernel_buffer[ofs..ofs+fsize]);
+        dest[fsize..].fill(0);
+    }
+
+    unsafe {
+        bt.free_pool(buffer_pool).unwrap();
+    }
     //@end read_kernel
+
 
     //@start exit_boot
     let (_system_table, _memmap) = system_table
@@ -112,10 +140,10 @@ fn efi_main(handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     //@end exit_boot
 
     //@start run_kernel
-    let entry_point: extern "sysv64" fn(frame_buf_base: *mut u8, frame_buf_size: usize) = unsafe {
-        core::mem::transmute(*((KERNEL_BASE_ADDR + 24) as *const u64))
+    let entry_point: extern "sysv64" fn(config: FrameBufferConfig) = unsafe {
+        core::mem::transmute(entry_point_addr)
     };
-    entry_point(frame_buf_base, frame_buf_size);
+    entry_point(config);
     //@end run_kernel
 
     println!("All done");

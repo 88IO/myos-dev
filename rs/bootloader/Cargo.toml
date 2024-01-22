@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 uefi = { version = "0.26.0", features = ["alloc"] }
 uefi-services = "0.23.0"
+goblin = { version = "0.8", features = ["elf32", "elf64", "endian_fd"], default-features = false }
+common = { path = "../common" }
