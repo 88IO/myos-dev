@@ -102,8 +102,10 @@ ENV PATH="/home/${USERNAME}/.cargo/bin:/home/${USERNAME}/osbook/devenv:${PATH}"
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
     rustup default nightly && \
+    rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu && \
     rustup target add x86_64-unknown-uefi && \
-    cargo install cargo-binutils 
+    cargo install cargo-binutils && \
+    cargo install cargo-make
 
 RUN ln -s /workspace/mikanos/MikanLoaderPkg edk2/
 
