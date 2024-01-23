@@ -21,28 +21,24 @@ impl<'a> PixelWriter<'a> {
         match config.mode_info.pixel_format() {
             PixelFormat::Rgb => Self {
                 config,
-                _write: Self::write_rgb
+                _write: |_self, x, y, color| {
+                    let pixel = _self.pixel_at(x, y);
+                    pixel[0] = color.r;
+                    pixel[1] = color.g;
+                    pixel[2] = color.b;
+                }
             },
             PixelFormat::Bgr => Self {
                 config,
-                _write: Self::write_bgr
+                _write: |_self, x, y, color| {
+                    let pixel = _self.pixel_at(x, y);
+                    pixel[0] = color.b;
+                    pixel[1] = color.g;
+                    pixel[2] = color.r;
+                }
             },
             _ => panic!()
         }
-    }
-
-    fn write_rgb(&self, x: usize, y: usize, color: PixelColor) {
-        let pixel = self.pixel_at(x, y);
-        pixel[0] = color.r;
-        pixel[1] = color.g;
-        pixel[2] = color.b;
-    }
-
-    fn write_bgr(&self, x: usize, y: usize, color: PixelColor) {
-        let pixel = self.pixel_at(x, y);
-        pixel[0] = color.b;
-        pixel[1] = color.g;
-        pixel[2] = color.r;
     }
 
     fn pixel_at(&self, x: usize, y: usize) -> &mut [u8] {
@@ -72,7 +68,7 @@ pub extern "sysv64" fn kernel_main(config: FrameBufferConfig) {
     }
     for x in 0..200 {
         for y in 0..100 {
-            pixel_writer.write(x, y, PixelColor { r: 0, g: 255, b: 0 });
+            pixel_writer.write(x, y, PixelColor { r: 255, g: 0, b: 0 });
         }
     }
 

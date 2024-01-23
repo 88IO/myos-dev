@@ -15,9 +15,7 @@
     "pre-link-args": {
         "ld": [
             "--entry=kernel_main",
-            "--image-base=0x100000",
-            "--static",
-            "-z", "separate-code"
+            "--static"
         ]
     },
     "target-pointer-width": "64"
