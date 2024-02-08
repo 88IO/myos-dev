@@ -13,5 +13,8 @@
   ],
   "containerEnv": {
     "DISPLAY": "${localEnv:DISPLAY}"
-  }
+  },
+  "extensions": [
+    "rust-lang.rust-analyzer"
+  ]
 }
