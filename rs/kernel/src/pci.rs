@@ -132,18 +132,71 @@ impl Device {
         Self { bus, device, function }
     }
 
-    pub fn vendor_id(&self) -> u16 {
-        let address = Pci::address(self.bus, self.device, self.function, 0x00);
-        (Pci::read(address) & 0xffff) as u16
-    }
-
-    pub fn class_code(&self) -> u32 {
-        let address = Pci::address(self.bus, self.device, self.function, 0x08);
+    pub fn read(&self, addr: u8) -> u32 {
+        let address = Pci::address(self.bus, self.device, self.function, addr);
         Pci::read(address)
     }
 
+    pub fn vendor_id(&self) -> u16 {
+        (self.read(0x00) & 0xffff) as u16
+    }
+
+    pub fn class_code(&self) -> ClassCode {
+        let reg = self.read(0x08);
+        ClassCode::new(
+            (reg >> 24) as u8,
+            (reg >> 16) as u8,
+            (reg >> 8) as u8
+        )
+    }
+
     pub fn header_type(&self) -> u8 {
-        let address = Pci::address(self.bus, self.device, self.function, 0x0c);
-        (Pci::read(address) >> 16) as u8
+        (self.read(0x0c) >> 16) as u8
+    }
+
+    pub fn bar(&self, bar_index: u8) -> Result<usize, &str> {
+        if bar_index >= 6 {
+            return Err("Index out of bounds");
+        }
+
+        let bar_addr = 0x10 + 4 * bar_index;
+        let bar = self.read(bar_addr) as usize;
+
+        if bar & 0x4 == 0 {
+            return Ok(bar);
+        }
+
+        if bar_index >= 5 {
+            return Err("Index out of bounds");
+        }
+
+        let bar_upper = self.read(bar_addr + 4) as usize;
+
+        Ok(bar | bar_upper << 32)
+    }
+}
+
+impl core::fmt::Display for Device {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}.{:02x}.{:02x}", self.bus, self.device, self.function)
+    }
+}
+
+#[derive(PartialEq)]
+pub struct ClassCode {
+    base: u8,
+    sub: u8,
+    interface: u8
+}
+
+impl ClassCode {
+    pub fn new(base: u8, sub: u8, interface: u8) -> Self {
+        Self { base, sub, interface }
+    }
+}
+
+impl core::fmt::Display for ClassCode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}{:02x}{:02x}", self.base, self.sub, self.interface)
     }
 }
