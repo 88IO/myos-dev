@@ -1,3 +1,7 @@
 [submodule "mikanos"]
 	path = mikanos
 	url = https://github.com/uchan-nos/mikanos
+
+[submodule "seccamp-os"]
+	path = seccamp-os
+	url = https://github.com/uchan-nos/seccamp-os
