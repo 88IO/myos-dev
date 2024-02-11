@@ -1,4 +1,4 @@
-use core::ops::Deref;
+use core::ops::{Deref, DerefMut};
 
 #[repr(align(64))]
 pub struct Aligned64<T>(pub T);
@@ -14,5 +14,11 @@ impl<T> Deref for Aligned64<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<T> DerefMut for Aligned64<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
